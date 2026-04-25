@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Швейный цех | Управление производством</title>
+  <style>
+    :root {
+      --bg: #f8fafc; --bg-panel: #ffffff; --bg-hover: #f1f5f9;
+      --text: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+      --accent: #3b82f6; --accent-hover: #2563eb;
+      --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+      --green-row: #dcfce7; --radius: 10px; --shadow: 0 2px 8px rgba(0,0,0,0.08);
+      --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --header-h: 64px;
+    }
+    .dark {
+      --bg: #0b1120; --bg-panel: #111827; --bg-hover: #1f2937;
+      --text: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+      --green-row: #14532d;
+      --shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; transition: background 0.3s, color 0.3s; }
+    
+    /* Layout */
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 1rem; }
+    
+    /* Header */
+    header { background: var(--bg-panel); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; height: var(--header-h); }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; height: 100%; }
+    .logo { font-weight: 700; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--accent); }
+    .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .theme-btn, .user-btn { background: none; border: 1px solid var(--border); padding: 0.5rem; border-radius: var(--radius); cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: center; color: var(--text); }
+    
+    /* Dashboard Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 2rem 0; }
+    .stat-card { background: var(--bg-panel); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); text-align: center; box-shadow: var(--shadow); }
+    .stat-card strong { display: block; font-size: 1.8rem; color: var(--accent); }
+    .stat-card span { color: var(--text-muted); font-size: 0.85rem; }
+
+    /* Controls & Filter */
+    .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; background: var(--bg-panel); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); }
+    .search-input { flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); }
+    .filter-btn { padding: 0.75rem 1rem; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; color: var(--text); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    
+    /* Grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; cursor: pointer; position: relative; transition: 0.2s; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); border-color: var(--accent); }
+    .card-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .badge { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 12px; font-weight: 600; text-transform: uppercase; }
+    .badge.work { background: rgba(59,130,246,0.1); color: var(--accent); }
+    .badge.wait { background: rgba(245,158,11,0.1); color: var(--warning); }
+    .close-req-banner { display: none; background: rgba(239,68,68,0.1); color: var(--danger); font-size: 0.8rem; padding: 0.4rem; border-radius: 4px; margin-top: 0.75rem; font-weight: 600; border: 1px dashed var(--danger); text-align: center; }
+    .card.alert .close-req-banner { display: block; }
+
+    /* Pagination */
+    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin: 2rem 0; }
+    .page-btn { padding: 0.5rem 0.8rem; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text); }
+    .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Editor View */
+    .editor-view { display: none; animation: fadeIn 0.3s; }
+    .editor-view.active { display: block; }
+    .editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: var(--bg-panel); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); }
+    .back-btn { background: var(--bg-panel); border: 1px solid var(--border); padding: 0.75rem 1rem; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+    .back-btn:hover { background: var(--bg-hover); }
+    
+    .table-wrapper { overflow-x: auto; background: var(--bg-panel); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    th { background: var(--bg); padding: 0.75rem; text-align: left; font-size: 0.85rem; border-bottom: 2px solid var(--border); }
+    td { padding: 0.5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr.completed { background: var(--green-row); }
+    tr.completed input { background: rgba(255,255,255,0.6); }
+    
+    select, input { width: 100%; padding: 0.4rem; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); }
+    .check-col { width: 40px; text-align: center; }
+
+    footer { text-align: center; padding: 2rem 0; color: var(--text-muted); font-size: 0.9rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+    .sergey-link { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .controls { flex-direction: column; }
+      .header-actions { gap: 0.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-inner">
+      <div class="logo" onclick="showDashboard()">🏭 Швейный цех</div>
+      <div class="header-actions">
+        <button class="theme-btn" id="themeToggle">🌓</button>
+        <select class="user-btn">
+          <option>Соколова Галина</option><option>Кирюшин</option><option>Полякова Наталья</option><option>Токмина Анна</option><option>Мясникова Елена</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- DASHBOARD -->
+    <div id="dashboardView">
+      <section class="stats">
+        <div class="stat-card"><strong id="count-work">0</strong><span>В работе</span></div>
+        <div class="stat-card"><strong id="count-wait">0</strong><span>В ожидании</span></div>
+        <div class="stat-card"><strong id="count-close">0</strong><span>Запрос на закрытие</span></div>
+      </section>
+
+      <section class="controls">
+        <input type="text" id="search" class="search-input" placeholder="🔍 Поиск бокса или изделия...">
+        <button class="filter-btn active" data-filter="all">Все</button>
+        <button class="filter-btn" data-filter="work">В работе</button>
+        <button class="filter-btn" data-filter="wait">В ожидании</button>
+      </section>
+
+      <section class="grid" id="box-grid"></section>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- EDITOR -->
+    <div id="editorView" class="editor-view">
+      <div class="editor-header">
+        <div>
+          <h2 id="editorTitle">Бокс #...</h2>
+          <div id="editorAlert" class="close-req-banner" style="display:none; max-width: 400px; margin-top: 0.5rem;">⚠️ ЗАПРОС НА ЗАКРЫТИЕ</div>
+        </div>
+        <button class="back-btn" onclick="showDashboard()">← Назад к списку</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="opsTable">
+          <thead>
+            <tr>
+              <th class="check-col">✓</th>
+              <th>Операция</th>
+              <th>Изделие</th>
+              <th>Кол-во</th>
+              <th>Швея 1</th>
+              <th>Кол-во</th>
+              <th>Швея 2</th>
+              <th>Кол-во</th>
+              <th>Дата</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>По вопросам работы программы — <a href="tel:+79503579722" class="sergey-link">+7 (950) 357-97-22 Сергей</a></p>
+  </footer>
+
+  <script>
+    // --- DATA FROM SOURCE ---
+    const employees = ["Выбрать...", "Абрамова Елена", "Чуганова Ирина", "Собирова Гулёр", "Мясникова Елена", "Токмина Анна", "Полякова Наталья", "Кирюшин", "Соколова Галина"];
+    
+    // Полный список боксов из исходника
+    // Close Requests: 58, 942, 975
+    const rawWork = "13,14,16,17,18,21,22,24,25,28,34,43,44,58,64,65,80,83,86,90,94,96,104,110,112,113,115,116,117,119,276,282,285,286,287,289,292,294,295,299,300,305,323,329,337,339,340,375,378,380,383,384,390,393,396,398,401,402,403,404,406,408,409,410,412,415,417,418,423,428,429,433,434,436,438,439,471,477,479,484,495,498,500,501,525,529,553,583,584,596,703,709,710,712,714,717,718,720,722,723,724,941,951,952,953,954,957,959,965,970,971,975,976,980,981".split(',');
+    const rawWait = "67,99,296,376,427,444,460,472,485,486,713,819,942,945,974".split(',');
+    const closeReqs = [58, 942, 975];
+
+    // Генерируем объекты данных
+    const boxesData = [];
+    const addItem = (ids, status, itemMap) => {
+      ids.forEach(id => {
+        const item = itemMap[id] || "Военная форма (мальчик)"; // Дефолтное название, если не нашли в маппере
+        boxesData.push({ id: parseInt(id), item, status, requestClose: closeReqs.includes(parseInt(id)), operations: [{ name: "Основная сборка", done: false, sewer1: "", qty1: 0, sewer2: "", qty2: 0, date: "" }] });
+      });
+    };
+
+    // Маппер названий (выборочно из исходника)
+    const items = {
+      58: "Фартук ШФ", 64: "Плащ Гарри Поттера", 44: "Туника детская", 
+      34: "Военная форма (девочка)", 43: "Военная форма (девочка)", 96: "Плащ Гарри Поттера", 596: "Плащ Гарри Поттера", 724: "Плащ Гарри Поттера", 954: "Плащ Гарри Поттера",
+      67: "Фартук ШФ", 99: "Фартук с одной юбкой без окантовки", 296: "Фартук с одной юбкой без окантовки", 429: "Фартук ШФ", 471: "Фартук ШФ", 583: "Фартук ШФ", 486: "Фартук ШФ", 713: "Фартук ШФ", 945: "Фартук с одной юбкой без окантовки", 974: "Фартук с одной юбкой без окантовки",
+      110: "Фартук ШФ", 17: "Военная форма (мальчик)" 
+    };
+
+    // Добавляем формы девочек и прочее
+    const girlForms = [34,43,80,83,94,112,282,286,294,295,300,337,380,384,390,417,418,434,439,484,500,525,709,710,712,717,718,722,376,427,485];
+    const coats = [64,96,596,724,954];
+    const aprons = [58,110,429,471,583,67,486,713,975];
+    const apronOneSkirt = [99,296,444,945,974];
+    const tunics = [44];
+
+    // Пересобираем с правильными названиями
+    boxesData.length = 0; // Clear
+    const processList = (list, status) => {
+      list.forEach(idStr => {
+        let id = parseInt(idStr);
+        let name = "Военная форма (мальчик)";
+        if(girlForms.includes(id)) name = "Военная форма (девочка)";
+        else if(coats.includes(id)) name = "Плащ Гарри Поттера";
+        else if(aprons.includes(id)) name = "Фартук ШФ";
+        else if(apronOneSkirt.includes(id)) name = "Фартук с одной юбкой";
+        else if(tunics.includes(id)) name = "Туника детская";
+        
+        boxesData.push({ 
+          id, 
+          item: name, 
+          status, 
+          requestClose: closeReqs.includes(id), 
+          operations: [{ name: "Сборка изделия", done: false, sewer1: "", qty1: 30, sewer2: "", qty2: 0, date: "" }] 
+        });
+      });
+    };
+
+    processList(rawWork, "work");
+    processList(rawWait, "wait");
+
+    // --- STATE ---
+    let currentPage = 1;
+    const itemsPerPage = 24;
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let currentBoxId = null;
+
+    // --- DOM ---
+    const gridEl = document.getElementById('box-grid');
+    const pagEl = document.getElementById('pagination');
+    const dashboardView = document.getElementById('dashboardView');
+    const editorView = document.getElementById('editorView');
+    const opsBody = document.querySelector('#opsTable tbody');
+
+    // --- RENDER ---
+    function render() {
+      // Filter
+      let filtered = boxesData.filter(b => {
+        const matchSearch = b.id.toString().includes(searchQuery) || b.item.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchStatus = currentFilter === 'all' || b.status === currentFilter;
+        return matchSearch && matchStatus;
+      });
+
+      // Sort: Close Req first, then ID
+      filtered.sort((a, b) => {
+        if (a.requestClose && !b.requestClose) return -1;
+        if (!a.requestClose && b.requestClose) return 1;
+        return a.id - b.id;
+      });
+
+      // Stats
+      document.getElementById('count-work').textContent = boxesData.filter(b => b.status === 'work').length;
+      document.getElementById('count-wait').textContent = boxesData.filter(b => b.status === 'wait').length;
+      document.getElementById('count-close').textContent = boxesData.filter(b => b.requestClose).length;
+
+      // Pagination Logic
+      const totalPages = Math.ceil(filtered.length / itemsPerPage);
+      if (currentPage > totalPages) currentPage = 1;
+      const start = (currentPage - 1) * itemsPerPage;
+      const pagedData = filtered.slice(start, start + itemsPerPage);
+
+      // Render Grid
+      gridEl.innerHTML = '';
+      pagedData.forEach(box => {
+        const el = document.createElement('div');
+        el.className = `card ${box.requestClose ? 'alert' : ''}`;
+        el.onclick = () => openEditor(box.id);
+        el.innerHTML = `
+          <div class="card-header"><strong>Бокс #${box.id}</strong><span class="badge ${box.status}">${box.status === 'work' ? 'В работе' : 'Ожидание'}</span></div>
+          <div style="color:var(--text-muted)">${box.item}</div>
+          <div class="close-req-banner">⚠️ ЗАПРОС НА ЗАКРЫТИЕ</div>
+        `;
+        gridEl.appendChild(el);
+      });
+
+      // Render Pagination
+      pagEl.innerHTML = '';
+      if(totalPages > 1) {
+        const prev = document.createElement('button');
+        prev.className = 'page-btn';
+        prev.textContent = '←';
+        prev.disabled = currentPage === 1;
+        prev.onclick = () => { currentPage--; render(); window.scrollTo(0,0); };
+        pagEl.appendChild(prev);
+
+        for(let i=1; i<=totalPages; i++) {
+          if(i===1 || i===totalPages || (i >= currentPage-1 && i <= currentPage+1)) {
+            const btn = document.createElement('button');
+            btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+            btn.textContent = i;
+            btn.onclick = () => { currentPage = i; render(); window.scrollTo(0,0); };
+            pagEl.appendChild(btn);
+          } else if (i === currentPage - 2 || i === currentPage + 2) {
+             const dots = document.createElement('span');
+             dots.textContent = '...';
+             dots.style.padding = '0.5rem';
+             pagEl.appendChild(dots);
+          }
+        }
+
+        const next = document.createElement('button');
+        next.className = 'page-btn';
+        next.textContent = '→';
+        next.disabled = currentPage === totalPages;
+        next.onclick = () => { currentPage++; render(); window.scrollTo(0,0); };
+        pagEl.appendChild(next);
+      }
+    }
+
+    function openEditor(id) {
+      const box = boxesData.find(b => b.id === id);
+      currentBoxId = id;
+      dashboardView.style.display = 'none';
+      editorView.classList.add('active');
+      
+      document.getElementById('editorTitle').textContent = `Бокс #${box.id} | ${box.item}`;
+      document.getElementById('editorAlert').style.display = box.requestClose ? 'block' : 'none';
+
+      opsBody.innerHTML = '';
+      box.operations.forEach((op, idx) => {
+        const tr = document.createElement('tr');
+        if(op.done) tr.classList.add('completed');
+        tr.innerHTML = `
+          <td class="check-col"><input type="checkbox" ${op.done?'checked':''} onchange="toggleTask(${id}, ${idx})"></td>
+          <td><strong>${op.name}</strong> ${op.done?'✅':''}</td>
+          <td><input value="${box.item}" readonly style="border:none;background:transparent"></td>
+          <td>${op.qty1 + op.qty2}</td>
+          <td><select onchange="updateWorker(${id}, ${idx}, 1, this.value)">${employees.map(e=>`<option ${e===op.sewer1?'selected':''}>${e}</option>`).join('')}</select></td>
+          <td><input type="number" value="${op.qty1}" style="width:60px"></td>
+          <td><select onchange="updateWorker(${id}, ${idx}, 2, this.value)"><option value="">Не выбрано</option>${employees.filter(e=>e!==op.sewer1 && e!=='Выбрать...').map(e=>`<option ${e===op.sewer2?'selected':''}>${e}</option>`).join('')}</select></td>
+          <td><input type="number" value="${op.qty2}" style="width:60px"></td>
+          <td><input type="date" value="${formatDate(op.date)}"></td>
+        `;
+        opsBody.appendChild(tr);
+      });
+    }
+
+    window.toggleTask = (id, idx) => {
+      boxesData.find(b=>b.id===id).operations[idx].done = !boxesData.find(b=>b.id===id).operations[idx].done;
+      openEditor(id);
+    };
+    
+    window.updateWorker = (id, idx, wNum, val) => {
+      const op = boxesData.find(b=>b.id===id).operations[idx];
+      if(wNum===1) op.sewer1 = val; else op.sewer2 = val;
+    };
+
+    function showDashboard() {
+      editorView.classList.remove('active');
+      dashboardView.style.display = 'block';
+      render(); // Refresh to update status if needed
+    }
+
+    function formatDate(d) { if(!d) return ''; return d.split('.').reverse().join('-'); }
+
+    // Events
+    document.getElementById('search').addEventListener('input', e => { searchQuery = e.target.value; currentPage = 1; render(); });
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        currentPage = 1;
+        render();
+      });
+    });
+    document.getElementById('themeToggle').addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+
+    render();
+  </script>
+</body>
+</html>
